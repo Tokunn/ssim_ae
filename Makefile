@@ -1,2 +1,2 @@
 clean:
-	rm -rf dc_img logs/2019*
+	rm -rf dc_img/2019* logs/2019*
