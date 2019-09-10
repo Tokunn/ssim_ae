@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torchvision.utils import save_image
-from torch.utils.tensorboard import SummaryWriter
+#from torch.utils.tensorboard import SummaryWriter
 import os, datetime
 from PIL import Image
 import numpy as np
@@ -58,7 +58,7 @@ class Autoencoder(nn.Module):
             nn.ReLU(True),
             nn.ConvTranspose2d(24, 12, 4, stride=2, padding=1),  # b, 8, 15, 15
             nn.ReLU(True),
-            nn.ConvTranspose2d(12, 3, 4, stride=2, padding=1),  # b, 1, 28, 28
+            nn.ConvTranspose2d(12, 1, 4, stride=2, padding=1),  # b, 1, 28, 28
             #nn.Sigmoid()
             nn.Tanh()
         )
@@ -70,7 +70,7 @@ class Autoencoder(nn.Module):
         return x
     
 def train(args, model, criterion, device, train_loader, optimizer, epoch):
-    writer = SummaryWriter(log_dir=log_dir)
+    #writer = SummaryWriter(log_dir=log_dir)
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -84,11 +84,11 @@ def train(args, model, criterion, device, train_loader, optimizer, epoch):
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.item()))
 
-    writer.add_scalar("train loss", loss.item(), epoch)
-    writer.close()
+    #writer.add_scalar("train loss", loss.item(), epoch)
+    #writer.close()
 
 def test(args, model, criterion, device, test_loader, epoch, now):
-    writer = SummaryWriter(log_dir=log_dir)
+    #writer = SummaryWriter(log_dir=log_dir)
     model.eval()
     test_loss = 0
     correct = 0
@@ -103,8 +103,8 @@ def test(args, model, criterion, device, test_loader, epoch, now):
             save_image(output.cpu().data, './dc_img/{}/image_{}.png'.format(now, epoch), normalize=True)
             # Normalize
             normdata = (output.cpu().data + 1) * 0.5
-            for j in range(5):
-                writer.add_image("test image {}".format((i+1)*5+j), normdata[j], epoch)
+            #for j in range(5):
+                #writer.add_image("test image {}".format((i+1)*5+j), normdata[j], epoch)
 
     test_loss /= len(test_loader.dataset)
 
@@ -112,8 +112,8 @@ def test(args, model, criterion, device, test_loader, epoch, now):
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
 
-    writer.add_scalar("loss test", test_loss)
-    writer.close()
+    #writer.add_scalar("loss test", test_loss)
+    #writer.close()
 
 def main():
     # Training settings
@@ -134,6 +134,7 @@ def main():
                         help='random seed (default: 1)')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='how many batches to wait before logging training status')
+    parser.add_argument('--imgsize', type=int, default=32)
     
     parser.add_argument('--save-model', action='store_true', default=False,
                         help='For Saving the current Model')
@@ -149,13 +150,14 @@ def main():
         #datasets.MNIST('../data', train=True, download=True,
         GrayCIFAR10('../data', train=True, download=True,
                        transform=transforms.Compose([
-                           transforms.RandomResizedCrop(32),
+                           transforms.RandomResizedCrop(args.imgsize),
                            transforms.RandomHorizontalFlip(),
                            transforms.ToTensor(),
                            #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                            transforms.Normalize((0.1307,), (0.3081,))
                        ])),
         batch_size=args.batch_size, shuffle=True, **kwargs)
+
     test_loader = torch.utils.data.DataLoader(
         #datasets.MNIST('../data', train=False, transform=transforms.Compose([
         GrayCIFAR10('../data', train=False, transform=transforms.Compose([
