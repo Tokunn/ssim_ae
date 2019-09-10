@@ -10,6 +10,8 @@ import os, datetime
 from PIL import Image
 import numpy as np
 
+import pytorch_ssim
+
 
 # Make log dirs
 now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -76,13 +78,14 @@ def train(args, model, criterion, device, train_loader, optimizer, epoch):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
-        loss = criterion(output, data)
+        #loss = criterion(output, data)
+        loss = -criterion(output, data) # ssim
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item()))
+                100. * batch_idx / len(train_loader), -loss.item()))
 
     #writer.add_scalar("train loss", loss.item(), epoch)
     #writer.close()
@@ -179,7 +182,8 @@ def main():
 
 
     model = Autoencoder().to(device)
-    criterion = nn.MSELoss()
+    #criterion = nn.MSELoss()
+    criterion = pytorch_ssim.SSIM()
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
 
     for epoch in range(1, args.epochs + 1):
