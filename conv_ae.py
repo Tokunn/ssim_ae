@@ -12,14 +12,18 @@ import numpy as np
 
 import pytorch_ssim
 
+import visdom
+from visdom_utils import VisdomLinePlotter
+#vis = visdom.Visdom()
+plotter = VisdomLinePlotter()
 
 # Make log dirs
 now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 pngpath = './dc_img/' + now
 os.makedirs(pngpath, exist_ok=True)
 
-title = "grayscale AE"
-log_dir = './logs/' + title + '/' + now
+#title = "grayscale AE"
+#log_dir = './logs/' + title + '/' + now
 
 
 
@@ -85,8 +89,10 @@ def train(args, model, criterion, device, train_loader, optimizer, epoch):
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), -loss.item()))
+                #100. * batch_idx / len(train_loader), -loss.item())) # ssim
+                100. * batch_idx / len(train_loader), loss.item()))
 
+    plotter.plot('loss', 'train', 'SSIM Loss', epoch, -loss.item())
     #writer.add_scalar("train loss", loss.item(), epoch)
     #writer.close()
 
@@ -104,6 +110,7 @@ def test(args, model, criterion, device, test_loader, epoch, now):
             #correct += pred.eq(target.view_as(pred)).sum().item()
 
             save_image(output.cpu().data, './dc_img/{}/image_{}.png'.format(now, epoch), normalize=True)
+            #save_image(data.cpu().data, './dc_img/{}/image_{}_data.png'.format(now, epoch), normalize=True)
             # Normalize
             normdata = (output.cpu().data + 1) * 0.5
             #for j in range(5):
@@ -115,6 +122,7 @@ def test(args, model, criterion, device, test_loader, epoch, now):
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
 
+    plotter.plot('loss', 'val', 'SSIM Loss', epoch, test_loss)
     #writer.add_scalar("loss test", test_loss)
     #writer.close()
 
@@ -164,6 +172,7 @@ def main():
     test_loader = torch.utils.data.DataLoader(
         #datasets.MNIST('../data', train=False, transform=transforms.Compose([
         GrayCIFAR10('../data', train=False, transform=transforms.Compose([
+                           transforms.Resize(args.imgsize),
                            transforms.ToTensor(),
                            #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                            transforms.Normalize((0.1307,), (0.3081,))
