@@ -14,19 +14,20 @@ import pytorch_ssim
 
 import visdom
 from visdom_utils import VisdomLinePlotter
-#vis = visdom.Visdom()
-plotter = VisdomLinePlotter()
 
 # Make log dirs
 now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 pngpath = './dc_img/' + now
 os.makedirs(pngpath, exist_ok=True)
 
+# Visdom
+plotter = VisdomLinePlotter(pngpath)
+
 #title = "grayscale AE"
 #log_dir = './logs/' + title + '/' + now
 
-LOSS = 'SSIM'
-#LOSS = 'MSE'
+#LOSS = 'SSIM'
+LOSS = 'MSE'
 
 
 def weights_init(m):
@@ -236,6 +237,7 @@ def main():
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='how many batches to wait before logging training status')
     parser.add_argument('--imgsize', type=int, default=128)
+    parser.add_argument('--num_samples', type=int, default=10000)
     
     parser.add_argument('--save-model', action='store_true', default=False,
                         help='For Saving the current Model')
@@ -256,7 +258,7 @@ def main():
                            #transforms.Normalize((0.5,), (0.5,))
                        ]))
     train_sampler = torch.utils.data.RandomSampler(
-            train_dataset, replacement=True, num_samples=10000)
+            train_dataset, replacement=True, num_samples=args.num_samples)
 
     train_loader = torch.utils.data.DataLoader(
         #datasets.MNIST('../data', train=True, download=True,
