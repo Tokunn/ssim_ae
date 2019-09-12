@@ -4,11 +4,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
-from torchvision.utils import save_image
-#from torch.utils.tensorboard import SummaryWriter
+#from torchvision.utils import save_image
+import torchvision.utils
 import os, datetime
 from PIL import Image
 import numpy as np
+import matplotlib.pyplot as plt
 
 import pytorch_ssim
 
@@ -17,8 +18,6 @@ from visdom_utils import VisdomLinePlotter
 
 # Make log dirs
 now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-#pngpath = './dc_img/' + now
-#os.makedirs(pngpath, exist_ok=True)
 
 
 def weights_init(m):
@@ -28,6 +27,40 @@ def weights_init(m):
     elif classname.find('BatchNorm') != -1:
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
+
+def choice(tensor0, tensor1, n):
+    # random.choice
+    assert tensor0.size(0)==tensor1.size(0)
+    perm = torch.randperm(tensor0.size(0))
+    idx = perm[:n]
+    tensor0 = tensor0[idx]
+    tensor1 = tensor1[idx]
+    return tensor0, tensor1
+
+
+def save_diffimage(output, data, filename, padding=2, normalize=False, range=None,
+        scale_each=False, pad_value=0, max_outputs=30):
+    torch.manual_seed(10)
+    
+    from PIL import Image
+    output, data = choice(output, data,  max_outputs)
+    diff = output - data
+    # make grid
+    grid_output = torchvision.utils.make_grid(output, nrow=1, padding=padding, pad_value=pad_value,
+            normalize=normalize, range=range, scale_each=scale_each)
+    grid_data = torchvision.utils.make_grid(data, nrow=1, padding=padding, pad_value=pad_value,
+            normalize=normalize, range=range, scale_each=scale_each)
+    grid_diff = torchvision.utils.make_grid(diff, nrow=1, padding=padding, pad_value=pad_value,
+            normalize=normalize, range=range, scale_each=scale_each)
+    # normalize
+    ndarr_output = grid_output.mul_(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to('cpu', torch.uint8).numpy()
+    ndarr_data = grid_data.mul_(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to('cpu', torch.uint8).numpy()
+    ndarr_diff = grid_diff.mul_(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to('cpu', torch.uint8).numpy()
+    # concatenate
+    ndarr = np.concatenate([ndarr_data, ndarr_output, ndarr_diff], axis=1)
+
+    im = Image.fromarray(ndarr)
+    im.save(filename)
 
 class GrayCIFAR10(datasets.CIFAR10):
     def __init__(self, root, train=True, 
@@ -40,7 +73,6 @@ class GrayCIFAR10(datasets.CIFAR10):
         img = Image.fromarray(img)
         # Convert to grayscale
         img = img.convert('L')
-        #img = np.reshape(np.asarray(img), (img.width, img.height, 1))
         if self.transform is not None:
             img = self.transform(img)
 
@@ -60,9 +92,7 @@ class MVTechAD(datasets.ImageFolder):
         sample = self.loader(path)
 
         #Convert to grayscale
-        #sample = Image.fromarray(sample)
         sample = sample.convert('L')
-        #sample = np.asarray(sample)
 
         if self.transform is not None:
             sample = self.transform(sample)
@@ -144,7 +174,6 @@ class Autoencoder(nn.Module):
             nn.ReLU(True),
             # ConvT1
             nn.ConvTranspose2d(32, 1, 4, stride=2, padding=1),
-            nn.ReLU(True),
             nn.Sigmoid()
             #nn.Tanh()
         )
@@ -155,7 +184,6 @@ class Autoencoder(nn.Module):
         return x
     
 def train(args, model, criterion, device, train_loader, optimizer, epoch):
-    #writer = SummaryWriter(log_dir=log_dir)
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         train_loss = []
@@ -173,11 +201,8 @@ def train(args, model, criterion, device, train_loader, optimizer, epoch):
 
     train_loss = torch.mean(torch.tensor(train_loss))
     plotter.plot('loss', 'train', LOSS+' Loss', epoch, train_loss)
-    #writer.add_scalar("train loss", loss.item(), epoch)
-    #writer.close()
 
 def test(args, model, criterion, device, test_loader, epoch, now):
-    #writer = SummaryWriter(log_dir=log_dir)
     model.eval()
     test_loss = []
     correct = 0
@@ -185,18 +210,15 @@ def test(args, model, criterion, device, test_loader, epoch, now):
         for i, (data, target) in enumerate(test_loader):
             data, target = data.to(device), target.to(device)
             output = model(data)
+            print("output", output[0].min(), output[0].max())
             test_loss.append(criterion(output, data).item())
             #pred = output.argmax(dim=1, keepdim=True) # get the index of the max log-probability
             #correct += pred.eq(target.view_as(pred)).sum().item()
 
-            save_image(output.cpu().data, os.path.join(pngpath, 'image_{}.png'.format( epoch)))
+            save_diffimage(output.cpu().data, data.cpu().data, os.path.join(pngpath, 'image_{}.png'.format( epoch)))
+            #save_image(output.cpu().data, os.path.join(pngpath, 'image_{}.png'.format( epoch)))
             #save_image(data.cpu().data, './dc_img/{}/image_{}_data.png'.format(now, epoch), normalize=True)
-            # Normalize
-            #normdata = (output.cpu().data + 1) * 0.5
-            #for j in range(5):
-                #writer.add_image("test image {}".format((i+1)*5+j), normdata[j], epoch)
 
-    #test_loss /= len(test_loader.dataset)
     test_loss = torch.mean(torch.tensor(test_loss))
 
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
@@ -204,8 +226,6 @@ def test(args, model, criterion, device, test_loader, epoch, now):
         100. * correct / len(test_loader.dataset)))
 
     plotter.plot('loss', 'val', LOSS+' Loss', epoch, test_loss)
-    #writer.add_scalar("loss test", test_loss)
-    #writer.close()
 
 def main():
     # Training settings
@@ -234,8 +254,11 @@ def main():
     parser.add_argument('--logname', type=str, default='')
     parser.add_argument('--save-model', action='store_true', default=True,
                         help='For Saving the current Model')
+
     args = parser.parse_args()
+
     use_cuda = not args.no_cuda and torch.cuda.is_available()
+    assert torch.cuda.is_available()==True
     torch.manual_seed(args.seed)
     device = torch.device("cuda" if use_cuda else "cpu")
     # Loss
@@ -251,6 +274,7 @@ def main():
 
     kwargs = {'num_workers': 5, 'pin_memory': True} if use_cuda else {}
     train_dataset = MVTechAD(os.path.expanduser('~/group/msuzuki/MVTechAD/capsule/train'),
+    #train_dataset = GrayCIFAR10('../data', train=True, download=True,
                        transform=transforms.Compose([
                            transforms.RandomResizedCrop(args.imgsize),
                            transforms.RandomHorizontalFlip(),
@@ -277,17 +301,6 @@ def main():
                            #transforms.Normalize((0.5,), (0.5,))
                        ])),
         batch_size=args.test_batch_size, shuffle=False, **kwargs)
-
-    ## TensorBoard
-    #writer = SummaryWriter(log_dir="logs/" + now)
-    ## TB Test
-    #x = np.random.randn(100)
-    #y = x.cumsum()
-    #for i in range(100):
-    #    writer.add_scalar("x", x[i], i)
-    #    writer.add_scalar("y", y[i], i)
-    #writer.close()
-
 
     model = Autoencoder().to(device)
     model.apply(weights_init)
