@@ -210,14 +210,9 @@ def test(args, model, criterion, device, test_loader, epoch, now):
         for i, (data, target) in enumerate(test_loader):
             data, target = data.to(device), target.to(device)
             output = model(data)
-            print("output", output[0].min(), output[0].max())
             test_loss.append(criterion(output, data).item())
-            #pred = output.argmax(dim=1, keepdim=True) # get the index of the max log-probability
-            #correct += pred.eq(target.view_as(pred)).sum().item()
 
             save_diffimage(output.cpu().data, data.cpu().data, os.path.join(pngpath, 'image_{}.png'.format( epoch)))
-            #save_image(output.cpu().data, os.path.join(pngpath, 'image_{}.png'.format( epoch)))
-            #save_image(data.cpu().data, './dc_img/{}/image_{}_data.png'.format(now, epoch), normalize=True)
 
     test_loss = torch.mean(torch.tensor(test_loss))
 
