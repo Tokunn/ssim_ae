@@ -9,11 +9,12 @@ import torchvision.utils
 import os, datetime
 from PIL import Image
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
+import datetime
 
 import pytorch_ssim
 
-import visdom
+# import visdom
 from visdom_utils import VisdomLinePlotter
 
 # Make log dirs
@@ -82,6 +83,36 @@ class GrayCIFAR10(datasets.CIFAR10):
         return img, target
 
 
+class ImageFolderRAM(torchvision.datasets.ImageFolder):
+    def __init__(self, root, transform, resize):
+        super(ImageFolderRAM, self).__init__(root, transform)
+        self.loaded = [None for _ in range(len(self))]
+        self.resize = resize
+
+    def __getitem__(self, index):
+        """
+        Args:
+           index (int): Index
+        Returns:
+           tuple: (sample, target, rotidx) where target is class_index of the target class.
+           rotidx: 0:0, 1:90, 2:180, 3:-90
+        """
+        path, target = self.samples[index]
+        if self.loaded[index]:
+            sample = self.loaded[index]
+        else:
+            sample = self.loader(path)
+            sample = self.resize(sample)
+            self.loaded[index] = sample
+
+        if self.transform is not None:
+            sample = self.transform(sample)
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return sample, target
+
+
 class MVTechAD(datasets.ImageFolder):
     def __init__(self, root, transform=None, target_transform=None):
         super(MVTechAD, self).__init__(
@@ -117,28 +148,28 @@ class Autoencoder(nn.Module):
             # Conv2 64x64x32
             nn.Conv2d(32, 32, 4, stride=2, padding=1),
             nn.ReLU(True),
-            ## Conv3 32x32x32
-            #nn.Conv2d(32, 32, 3, stride=1, padding=1),
-            #nn.ReLU(True),
-            ## Conv4 32x32x32
-            #nn.Conv2d(32, 64, 4, stride=2, padding=1),
-            #nn.ReLU(True),
-            ## Conv5 16x16x64
-            #nn.Conv2d(64, 64, 3, stride=1, padding=1),
-            #nn.ReLU(True),
-            ## Conv6 16x16x64
-            #nn.Conv2d(64, 128, 4, stride=2, padding=1),
-            #nn.ReLU(True),
-            ## Conv7 8x8x128
-            #nn.Conv2d(128, 64, 3, stride=1, padding=1),
-            #nn.ReLU(True),
-            ## Conv8 8x8x64
-            #nn.Conv2d(64, 32, 3, stride=1, padding=1),
-            #nn.ReLU(True),
-            ## Conv9 8x8x32
-            #nn.Conv2d(32, 500, 8, stride=1, padding=0),
-            #nn.ReLU(True),
-            ## 1x1xd
+            # Conv3 32x32x32
+            nn.Conv2d(32, 32, 3, stride=1, padding=1),
+            nn.ReLU(True),
+            # Conv4 32x32x32
+            nn.Conv2d(32, 64, 4, stride=2, padding=1),
+            nn.ReLU(True),
+            # Conv5 16x16x64
+            nn.Conv2d(64, 64, 3, stride=1, padding=1),
+            nn.ReLU(True),
+            # Conv6 16x16x64
+            nn.Conv2d(64, 128, 4, stride=2, padding=1),
+            nn.ReLU(True),
+            # Conv7 8x8x128
+            nn.Conv2d(128, 64, 3, stride=1, padding=1),
+            nn.ReLU(True),
+            # Conv8 8x8x64
+            nn.Conv2d(64, 32, 3, stride=1, padding=1),
+            nn.ReLU(True),
+            # Conv9 8x8x32
+            nn.Conv2d(32, 500, 8, stride=1, padding=0),
+            nn.ReLU(True),
+            # 1x1xd
         )
         self.decoder = nn.Sequential(
             #nn.ConvTranspose2d(48, 24, 4, stride=2, padding=1),  # b, 16, 5, 5
@@ -148,27 +179,27 @@ class Autoencoder(nn.Module):
             #nn.ConvTranspose2d(12, 1, 4, stride=2, padding=1),  # b, 1, 28, 28
             #nn.Sigmoid()
 
-            ## ConvT9
-            #nn.ConvTranspose2d(500, 32, 8, stride=1, padding=0),
-            #nn.ReLU(True),
-            ## ConvT8
-            #nn.ConvTranspose2d(32, 64, 3, stride=1, padding=1),
-            #nn.ReLU(True),
-            ## ConvT7
-            #nn.ConvTranspose2d(64, 128, 3, stride=1, padding=1),
-            #nn.ReLU(True),
-            ## ConvT6
-            #nn.ConvTranspose2d(128, 64, 4, stride=2, padding=1),
-            #nn.ReLU(True),
-            ## ConvT5
-            #nn.ConvTranspose2d(64, 64, 3, stride=1, padding=1),
-            #nn.ReLU(True),
-            ## ConvT4
-            #nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),
-            #nn.ReLU(True),
-            ## ConvT3
-            #nn.ConvTranspose2d(32, 32, 3, stride=1, padding=1),
-            #nn.ReLU(True),
+            # ConvT9
+            nn.ConvTranspose2d(500, 32, 8, stride=1, padding=0),
+            nn.ReLU(True),
+            # ConvT8
+            nn.ConvTranspose2d(32, 64, 3, stride=1, padding=1),
+            nn.ReLU(True),
+            # ConvT7
+            nn.ConvTranspose2d(64, 128, 3, stride=1, padding=1),
+            nn.ReLU(True),
+            # ConvT6
+            nn.ConvTranspose2d(128, 64, 4, stride=2, padding=1),
+            nn.ReLU(True),
+            # ConvT5
+            nn.ConvTranspose2d(64, 64, 3, stride=1, padding=1),
+            nn.ReLU(True),
+            # ConvT4
+            nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),
+            nn.ReLU(True),
+            # ConvT3
+            nn.ConvTranspose2d(32, 32, 3, stride=1, padding=1),
+            nn.ReLU(True),
             # ConvT2
             nn.ConvTranspose2d(32, 32, 4, stride=2, padding=1),
             nn.ReLU(True),
@@ -194,10 +225,11 @@ def train(args, model, criterion, device, train_loader, optimizer, epoch):
         train_loss.append(loss.item())
         loss.backward()
         optimizer.step()
-        if batch_idx % args.log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.sampler),
-                100. * batch_idx / len(train_loader), loss.item()))
+
+        #if batch_idx % args.log_interval == 0:
+        print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+            epoch, batch_idx * len(data), len(train_loader.sampler),
+            100. * batch_idx / len(train_loader), loss.item()))
 
     train_loss = torch.mean(torch.tensor(train_loss))
     plotter.plot('loss', 'train', LOSS+' Loss', epoch, train_loss)
@@ -212,8 +244,7 @@ def test(args, model, criterion, device, test_loader, epoch, now):
             output = model(data)
             test_loss.append(criterion(output, data).item())
 
-            save_diffimage(output.cpu().data, data.cpu().data, os.path.join(pngpath, 'image_{}.png'.format( epoch)))
-
+    save_diffimage(output.cpu().data, data.cpu().data, os.path.join(pngpath, 'image_{}.png'.format( epoch)))
     test_loss = torch.mean(torch.tensor(test_loss))
 
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
@@ -249,6 +280,7 @@ def main():
     parser.add_argument('--logname', type=str, default='')
     parser.add_argument('--save-model', action='store_true', default=True,
                         help='For Saving the current Model')
+    parser.add_argument('--classes', type=str, default='capsule')
 
     args = parser.parse_args()
 
@@ -268,15 +300,20 @@ def main():
     plotter = VisdomLinePlotter(pngpath, enable=args.visdom)
 
     kwargs = {'num_workers': 5, 'pin_memory': True} if use_cuda else {}
-    train_dataset = MVTechAD(os.path.expanduser('~/group/msuzuki/MVTechAD/capsule/train'),
+    #train_dataset = MVTechAD(os.path.expanduser('~/group/msuzuki/MVTechAD/capsule/train'),
     #train_dataset = GrayCIFAR10('../data', train=True, download=True,
+    #train_dataset = ImageFolderRAM(os.path.expanduser('/home/aca10370eo/group/dataset/cifar10/train'),
+    train_dataset = ImageFolderRAM(os.path.expanduser('~/group/msuzuki/MVTechAD/{}/train'.format(args.classes)),
                        transform=transforms.Compose([
                            transforms.RandomResizedCrop(args.imgsize),
+                           transforms.Grayscale(),
                            transforms.RandomHorizontalFlip(),
                            transforms.ToTensor()
                            #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                            #transforms.Normalize((0.5,), (0.5,))
-                       ]))
+                       ]),
+                       resize = transforms.Resize(256)
+                       )
     train_sampler = torch.utils.data.RandomSampler(
             train_dataset, replacement=True, num_samples=args.num_samples)
 
@@ -286,19 +323,26 @@ def main():
                 train_dataset, sampler=train_sampler,
                 batch_size=args.batch_size, shuffle=False, **kwargs)
 
-    test_loader = torch.utils.data.DataLoader(
         #datasets.MNIST('../data', train=False, transform=transforms.Compose([
         #GrayCIFAR10('../data', train=False, transform=transforms.Compose([
-        MVTechAD(os.path.expanduser('~/group/msuzuki/MVTechAD/capsule/test'), transform=transforms.Compose([
+        #MVTechAD(os.path.expanduser('~/group/msuzuki/MVTechAD/capsule/test'), transform=transforms.Compose([
+        #ImageFolderRAM(os.path.expanduser('/home/aca10370eo/group/dataset/cifar10/val'), transform=transforms.Compose([
+    test_loader = torch.utils.data.DataLoader(
+        ImageFolderRAM(os.path.expanduser('~/group/msuzuki/MVTechAD/{}/test'.format(args.classes)), transform=transforms.Compose([
                            transforms.Resize(args.imgsize),
+                           transforms.Grayscale(),
                            transforms.ToTensor()
                            #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                            #transforms.Normalize((0.5,), (0.5,))
-                       ])),
+                       ]),
+                       resize = transforms.Resize(256)),
         batch_size=args.test_batch_size, shuffle=False, **kwargs)
 
-    model = Autoencoder().to(device)
-    model.apply(weights_init)
+    model = Autoencoder()
+    #model = nn.DataParallel(model)
+    model = model.to(device)
+    torch.backends.cudnn.benchmark = True
+    #model.apply(weights_init)
 
     if LOSS=='SSIM':
         print("SSIM Loss")
@@ -310,6 +354,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weightdecay)
 
     for epoch in range(1, args.epochs + 1):
+        print(datetime.datetime.now())
         train(args, model, criterion, device, train_loader, optimizer, epoch)
         test(args, model, criterion, device, test_loader, epoch, now)
 
@@ -318,5 +363,6 @@ def main():
 
         
 if __name__ == '__main__':
+    print(torch.cuda.device_count())
     main()
 

@@ -10,4 +10,4 @@ module load cuda/10.0/10.0.130 cudnn/7.4/7.4.2
 
 cd ~/Documents/ssim_ae
 
-python3 conv_ae.py --loss SSIM --logname 00SSIM
+python3 conv_ae.py --loss SSIM --logname 01SSIM_black_deep_carpet --classes carpet
