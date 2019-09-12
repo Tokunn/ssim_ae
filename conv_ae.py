@@ -17,17 +17,8 @@ from visdom_utils import VisdomLinePlotter
 
 # Make log dirs
 now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-pngpath = './dc_img/' + now
-os.makedirs(pngpath, exist_ok=True)
-
-# Visdom
-plotter = VisdomLinePlotter(pngpath)
-
-#title = "grayscale AE"
-#log_dir = './logs/' + title + '/' + now
-
-#LOSS = 'SSIM'
-LOSS = 'MSE'
+#pngpath = './dc_img/' + now
+#os.makedirs(pngpath, exist_ok=True)
 
 
 def weights_init(m):
@@ -198,7 +189,7 @@ def test(args, model, criterion, device, test_loader, epoch, now):
             #pred = output.argmax(dim=1, keepdim=True) # get the index of the max log-probability
             #correct += pred.eq(target.view_as(pred)).sum().item()
 
-            save_image(output.cpu().data, './dc_img/{}/image_{}.png'.format(now, epoch))
+            save_image(output.cpu().data, os.path.join(pngpath, 'image_{}.png'.format( epoch)))
             #save_image(data.cpu().data, './dc_img/{}/image_{}_data.png'.format(now, epoch), normalize=True)
             # Normalize
             #normdata = (output.cpu().data + 1) * 0.5
@@ -238,15 +229,25 @@ def main():
                         help='how many batches to wait before logging training status')
     parser.add_argument('--imgsize', type=int, default=128)
     parser.add_argument('--num_samples', type=int, default=10000)
-    
-    parser.add_argument('--save-model', action='store_true', default=False,
+    parser.add_argument('--loss', type=str, default='SSIM')
+    parser.add_argument('--visdom', action='store_true', default=False)
+    parser.add_argument('--logname', type=str, default='')
+    parser.add_argument('--save-model', action='store_true', default=True,
                         help='For Saving the current Model')
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
-    
     torch.manual_seed(args.seed)
-
     device = torch.device("cuda" if use_cuda else "cpu")
+    # Loss
+    global LOSS
+    LOSS = args.loss
+    # pngpath
+    global pngpath
+    pngpath = './dc_img/' + args.logname + now
+    os.makedirs(pngpath, exist_ok=True)
+    # Visdom
+    global plotter
+    plotter = VisdomLinePlotter(pngpath, enable=args.visdom)
 
     kwargs = {'num_workers': 5, 'pin_memory': True} if use_cuda else {}
     train_dataset = MVTechAD(os.path.expanduser('~/group/msuzuki/MVTechAD/capsule/train'),
@@ -292,8 +293,10 @@ def main():
     model.apply(weights_init)
 
     if LOSS=='SSIM':
+        print("SSIM Loss")
         criterion = pytorch_ssim.SSIM()
     else:
+        print("MSE LOss")
         criterion = nn.MSELoss()
     #optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weightdecay)
