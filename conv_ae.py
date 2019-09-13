@@ -9,8 +9,9 @@ import torchvision.utils
 import os, datetime
 from PIL import Image
 import numpy as np
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import datetime
+from sklearn import metrics
 
 import pytorch_ssim
 
@@ -29,23 +30,40 @@ def weights_init(m):
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
 
-def choice(tensor0, tensor1, n):
+def choice(tensor0, tensor1, tensor2, n):
     # random.choice
     assert tensor0.size(0)==tensor1.size(0)
+    assert tensor1.size(0)==tensor2.size(0)
+
     perm = torch.randperm(tensor0.size(0))
     idx = perm[:n]
     tensor0 = tensor0[idx]
     tensor1 = tensor1[idx]
-    return tensor0, tensor1
+    tensor2 = tensor2[idx]
+    return tensor0, tensor1, tensor2
 
+def save_roc(output, data, truth, filename):
+    diff = np.abs(np.asarray(output - data))
+    label = np.asarray([np.round(t.max()) for t in truth], dtype=np.int8)
+    predict = [np.mean(p) for p in diff]
+    fpr, tpr, threshoulds = metrics.roc_curve(label, predict)
+    auc = metrics.auc(fpr, tpr)
 
-def save_diffimage(output, data, filename, padding=2, normalize=False, range=None,
+    plt.figure()
+    plt.plot(fpr, tpr, label='ROC curve (area = %.2f'%auc)
+    plt.legend()
+    plt.title('ROC curve')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.grid(True)
+    plt.savefig(filename)
+
+def save_diffimage(output, data, truth, filename, padding=2, normalize=False, range=None,
         scale_each=False, pad_value=0, max_outputs=30):
     torch.manual_seed(10)
     
-    from PIL import Image
-    output, data = choice(output, data,  max_outputs)
-    diff = output - data
+    output, data, truth = choice(output, data, truth,  max_outputs)
+    diff = np.abs(output - data)
     # make grid
     grid_output = torchvision.utils.make_grid(output, nrow=1, padding=padding, pad_value=pad_value,
             normalize=normalize, range=range, scale_each=scale_each)
@@ -53,12 +71,15 @@ def save_diffimage(output, data, filename, padding=2, normalize=False, range=Non
             normalize=normalize, range=range, scale_each=scale_each)
     grid_diff = torchvision.utils.make_grid(diff, nrow=1, padding=padding, pad_value=pad_value,
             normalize=normalize, range=range, scale_each=scale_each)
+    grid_truth = torchvision.utils.make_grid(truth, nrow=1, padding=padding, pad_value=pad_value,
+            normalize=normalize, range=range, scale_each=scale_each)
     # normalize
     ndarr_output = grid_output.mul_(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to('cpu', torch.uint8).numpy()
     ndarr_data = grid_data.mul_(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to('cpu', torch.uint8).numpy()
     ndarr_diff = grid_diff.mul_(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to('cpu', torch.uint8).numpy()
+    ndarr_truth = grid_truth.mul_(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to('cpu', torch.uint8).numpy()
     # concatenate
-    ndarr = np.concatenate([ndarr_data, ndarr_output, ndarr_diff], axis=1)
+    ndarr = np.concatenate([ndarr_data, ndarr_output, ndarr_diff, ndarr_truth], axis=1)
 
     im = Image.fromarray(ndarr)
     im.save(filename)
@@ -234,23 +255,30 @@ def train(args, model, criterion, device, train_loader, optimizer, epoch):
     train_loss = torch.mean(torch.tensor(train_loss))
     plotter.plot('loss', 'train', LOSS+' Loss', epoch, train_loss)
 
-def test(args, model, criterion, device, test_loader, epoch, now):
+def test(args, model, criterion, device, test_loader, truth_loader, epoch, now):
     model.eval()
     test_loss = []
     correct = 0
     with torch.no_grad():
-        for i, (data, target) in enumerate(test_loader):
+        for i, ((data, target), (truthdata, truthtarget))in enumerate(
+                zip(test_loader, truth_loader)):
             data, target = data.to(device), target.to(device)
             output = model(data)
             test_loss.append(criterion(output, data).item())
 
-    save_diffimage(output.cpu().data, data.cpu().data, os.path.join(pngpath, 'image_{}.png'.format( epoch)))
-    test_loss = torch.mean(torch.tensor(test_loss))
+    # Save Image
+    save_diffimage(output.cpu().data, data.cpu().data, truthdata,
+            os.path.join(pngpath, 'image_{}.png'.format(epoch)))
 
+    # Save ROC
+    save_roc(output.cpu().data, data.cpu().data, truthdata,
+            os.path.join(pngpath, 'roc_{}.png'.format(epoch)))
+
+    # Show loss
+    test_loss = torch.mean(torch.tensor(test_loss))
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
-
     plotter.plot('loss', 'val', LOSS+' Loss', epoch, test_loss)
 
 def main():
@@ -338,6 +366,15 @@ def main():
                        resize = transforms.Resize(256)),
         batch_size=args.test_batch_size, shuffle=False, **kwargs)
 
+    truth_loader = torch.utils.data.DataLoader(
+        ImageFolderRAM(os.path.expanduser('~/group/msuzuki/MVTechAD/{}/ground_truth'.format(args.classes)), transform=transforms.Compose([
+                            transforms.Resize(args.imgsize),
+                            transforms.Grayscale(),
+                            transforms.ToTensor()
+                        ]),
+                        resize = transforms.Resize(256)),
+        batch_size=args.test_batch_size, shuffle=False, **kwargs)
+
     model = Autoencoder()
     #model = nn.DataParallel(model)
     model = model.to(device)
@@ -356,7 +393,7 @@ def main():
     for epoch in range(1, args.epochs + 1):
         print(datetime.datetime.now())
         train(args, model, criterion, device, train_loader, optimizer, epoch)
-        test(args, model, criterion, device, test_loader, epoch, now)
+        test(args, model, criterion, device, test_loader, truth_loader, epoch, now)
 
     if (args.save_model):
         torch.save(model.state_dict(),"mnist_cnn.pt")
