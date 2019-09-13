@@ -10,4 +10,4 @@ module load cuda/10.0/10.0.130 cudnn/7.4/7.4.2
 
 cd ~/Documents/ssim_ae
 
-python3 conv_ae.py --loss MSE --logname 01MSE_black_deep_carpet --classes carpet
+python3 conv_ae.py --loss MSE --logname 02MSE_roc_metal_nut --classes metal_nut --batch-size 1024
