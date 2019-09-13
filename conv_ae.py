@@ -50,7 +50,6 @@ def save_diffimage(output, data, truth, filename, filename_roc,
     label = np.asarray([np.round(t.max()) for t in truth], dtype=np.int8)
     predict = [np.mean(p) for p in diff]
     fpr, tpr, threshoulds = metrics.roc_curve(label, predict)
-    print(threshoulds)
     auc = metrics.auc(fpr, tpr)
 
     plt.figure()
@@ -192,7 +191,7 @@ class Autoencoder(nn.Module):
             nn.Conv2d(64, 32, 3, stride=1, padding=1),
             nn.ReLU(True),
             # Conv9 8x8x32
-            nn.Conv2d(32, 500, 8, stride=1, padding=0),
+            nn.Conv2d(32, 100, 16, stride=1, padding=0),
             nn.ReLU(True),
             # 1x1xd
         )
@@ -205,7 +204,7 @@ class Autoencoder(nn.Module):
             #nn.Sigmoid()
 
             # ConvT9
-            nn.ConvTranspose2d(500, 32, 8, stride=1, padding=0),
+            nn.ConvTranspose2d(100, 32, 16, stride=1, padding=0),
             nn.ReLU(True),
             # ConvT8
             nn.ConvTranspose2d(32, 64, 3, stride=1, padding=1),
@@ -336,12 +335,12 @@ def main():
                        transform=transforms.Compose([
                            transforms.RandomResizedCrop(args.imgsize),
                            transforms.Grayscale(),
-                           transforms.RandomHorizontalFlip(),
+                           #transforms.RandomHorizontalFlip(),
                            transforms.ToTensor()
                            #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                            #transforms.Normalize((0.5,), (0.5,))
                        ]),
-                       resize = transforms.Resize(256)
+                       resize = transforms.Resize(args.imgsize*2)
                        )
     train_sampler = torch.utils.data.RandomSampler(
             train_dataset, replacement=True, num_samples=args.num_samples)
@@ -364,7 +363,7 @@ def main():
                            #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                            #transforms.Normalize((0.5,), (0.5,))
                        ]),
-                       resize = transforms.Resize(256)),
+                       resize = transforms.Resize(args.imgsize*2)),
         batch_size=args.test_batch_size, shuffle=False, **kwargs)
 
     truth_loader = torch.utils.data.DataLoader(
@@ -373,7 +372,7 @@ def main():
                             transforms.Grayscale(),
                             transforms.ToTensor()
                         ]),
-                        resize = transforms.Resize(256)),
+                        resize = transforms.Resize(args.imgsize*2)),
         batch_size=args.test_batch_size, shuffle=False, **kwargs)
 
     model = Autoencoder()
