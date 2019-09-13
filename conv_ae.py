@@ -42,11 +42,15 @@ def choice(tensor0, tensor1, tensor2, n):
     tensor2 = tensor2[idx]
     return tensor0, tensor1, tensor2
 
-def save_roc(output, data, truth, filename):
+def save_diffimage(output, data, truth, filename, filename_roc,
+        padding=2, normalize=False, range=None,
+        scale_each=False, pad_value=0, max_outputs=30):
+    # Save ROC
     diff = np.abs(np.asarray(output - data))
     label = np.asarray([np.round(t.max()) for t in truth], dtype=np.int8)
     predict = [np.mean(p) for p in diff]
     fpr, tpr, threshoulds = metrics.roc_curve(label, predict)
+    print(threshoulds)
     auc = metrics.auc(fpr, tpr)
 
     plt.figure()
@@ -56,14 +60,14 @@ def save_roc(output, data, truth, filename):
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.grid(True)
-    plt.savefig(filename)
+    plt.savefig(filename_roc)
 
-def save_diffimage(output, data, truth, filename, padding=2, normalize=False, range=None,
-        scale_each=False, pad_value=0, max_outputs=30):
+    # Save Diff Image
     torch.manual_seed(10)
     
     output, data, truth = choice(output, data, truth,  max_outputs)
     diff = np.abs(output - data)
+    diff = (diff-diff.min())/(diff.max()-diff.min())
     # make grid
     grid_output = torchvision.utils.make_grid(output, nrow=1, padding=padding, pad_value=pad_value,
             normalize=normalize, range=range, scale_each=scale_each)
@@ -268,10 +272,7 @@ def test(args, model, criterion, device, test_loader, truth_loader, epoch, now):
 
     # Save Image
     save_diffimage(output.cpu().data, data.cpu().data, truthdata,
-            os.path.join(pngpath, 'image_{}.png'.format(epoch)))
-
-    # Save ROC
-    save_roc(output.cpu().data, data.cpu().data, truthdata,
+            os.path.join(pngpath, 'image_{}.png'.format(epoch)),
             os.path.join(pngpath, 'roc_{}.png'.format(epoch)))
 
     # Show loss
