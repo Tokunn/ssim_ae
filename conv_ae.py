@@ -42,24 +42,29 @@ def choice(tensor0, tensor1, tensor2, n):
     tensor2 = tensor2[idx]
     return tensor0, tensor1, tensor2
 
-def save_diffimage(output, data, truth, filename, filename_roc,
+def save_diffimage(output, data, truth, filename, filename_roc=None,
         padding=2, normalize=False, range=None,
         scale_each=False, pad_value=0, max_outputs=30):
-    # Save ROC
-    diff = np.abs(np.asarray(output - data))
-    label = np.asarray([np.round(t.max()) for t in truth], dtype=np.int8)
-    predict = [np.mean(p) for p in diff]
-    fpr, tpr, threshoulds = metrics.roc_curve(label, predict)
-    auc = metrics.auc(fpr, tpr)
+    if filename_roc is not None:
+        # Calc MSE
+        mse = np.asarray([torch.nn.functional.mse_loss(out, da) for (out, da) in zip(output, data)])
+        mse = np.reshape(mse, (-1, 5))
+        mse = np.mean(mse, axis=1)
 
-    plt.figure()
-    plt.plot(fpr, tpr, label='ROC curve (area = %.2f'%auc)
-    plt.legend()
-    plt.title('ROC curve')
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.grid(True)
-    plt.savefig(filename_roc)
+        # Save ROC
+        label = np.asarray([np.round(t.max()) for t in np.reshape(np.asarray(truth), (-1, 5*truth.size(1)*truth.size(2)*truth.size(3)))], dtype=np.int8)
+        #predict = [np.mean(p) for p in diff]
+        fpr, tpr, threshoulds = metrics.roc_curve(label, mse)
+        auc = metrics.auc(fpr, tpr)
+
+        plt.figure()
+        plt.plot(fpr, tpr, label='ROC curve (area = %.2f'%auc)
+        plt.legend()
+        plt.title('ROC curve')
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.grid(True)
+        plt.savefig(filename_roc)
 
     # Save Diff Image
     torch.manual_seed(10)
@@ -167,31 +172,43 @@ class Autoencoder(nn.Module):
             #nn.Conv2d(24, 48, 4, stride=2, padding=1),  # b, 8, 3, 3
 
             # Conv1 128x128x1
-            nn.Conv2d(1, 32, 4, stride=2, padding=1),
+            nn.Conv2d(3, 32, 4, stride=2, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(True),
+            ## Conv256 128x128x1
+            #nn.Conv2d(32, 32, 4, stride=2, padding=1),
+            #nn.ReLU(True),
             # Conv2 64x64x32
             nn.Conv2d(32, 32, 4, stride=2, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(True),
             # Conv3 32x32x32
             nn.Conv2d(32, 32, 3, stride=1, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(True),
             # Conv4 32x32x32
             nn.Conv2d(32, 64, 4, stride=2, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(True),
             # Conv5 16x16x64
             nn.Conv2d(64, 64, 3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(True),
             # Conv6 16x16x64
             nn.Conv2d(64, 128, 4, stride=2, padding=1),
+            nn.BatchNorm2d(128),
             nn.ReLU(True),
             # Conv7 8x8x128
             nn.Conv2d(128, 64, 3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(True),
             # Conv8 8x8x64
             nn.Conv2d(64, 32, 3, stride=1, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(True),
             # Conv9 8x8x32
-            nn.Conv2d(32, 100, 16, stride=1, padding=0),
+            nn.Conv2d(32, 500, 8, stride=1, padding=0),
+            nn.BatchNorm2d(500),
             nn.ReLU(True),
             # 1x1xd
         )
@@ -204,31 +221,43 @@ class Autoencoder(nn.Module):
             #nn.Sigmoid()
 
             # ConvT9
-            nn.ConvTranspose2d(100, 32, 16, stride=1, padding=0),
+            nn.ConvTranspose2d(500, 32, 8, stride=1, padding=0),
+            nn.BatchNorm2d(32),
             nn.ReLU(True),
             # ConvT8
             nn.ConvTranspose2d(32, 64, 3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(True),
             # ConvT7
             nn.ConvTranspose2d(64, 128, 3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
             nn.ReLU(True),
             # ConvT6
             nn.ConvTranspose2d(128, 64, 4, stride=2, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(True),
             # ConvT5
             nn.ConvTranspose2d(64, 64, 3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(True),
             # ConvT4
             nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(True),
             # ConvT3
             nn.ConvTranspose2d(32, 32, 3, stride=1, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(True),
             # ConvT2
             nn.ConvTranspose2d(32, 32, 4, stride=2, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(True),
+            ## ConvT256
+            #nn.ConvTranspose2d(32, 32, 4, stride=2, padding=1),
+            #nn.ReLU(True),
             # ConvT1
-            nn.ConvTranspose2d(32, 1, 4, stride=2, padding=1),
+            nn.ConvTranspose2d(32, 3, 4, stride=2, padding=1),
+            #nn.BatchNorm2d(3),
             nn.Sigmoid()
             #nn.Tanh()
         )
@@ -241,6 +270,7 @@ class Autoencoder(nn.Module):
 def train(args, model, criterion, device, train_loader, optimizer, epoch):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
+        #data = torch.reshape(data, (data.size(0)*5, data.size(2), data.size(3), data.size(4)))
         train_loss = []
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
@@ -255,6 +285,10 @@ def train(args, model, criterion, device, train_loader, optimizer, epoch):
             epoch, batch_idx * len(data), len(train_loader.sampler),
             100. * batch_idx / len(train_loader), loss.item()))
 
+    # debug save train images
+    save_diffimage(output.cpu().data, data.cpu().data, data.cpu().data,
+            os.path.join(pngpath, 'train_{}.png'.format(epoch)))
+
     train_loss = torch.mean(torch.tensor(train_loss))
     plotter.plot('loss', 'train', LOSS+' Loss', epoch, train_loss)
 
@@ -265,6 +299,9 @@ def test(args, model, criterion, device, test_loader, truth_loader, epoch, now):
     with torch.no_grad():
         for i, ((data, target), (truthdata, truthtarget))in enumerate(
                 zip(test_loader, truth_loader)):
+            # Open FiveCrop data
+            data = torch.reshape(data, (data.size(0)*data.size(1), data.size(2), data.size(3), data.size(4)))
+            truthdata = torch.reshape(truthdata, (truthdata.size(0)*truthdata.size(1), truthdata.size(2), truthdata.size(3), truthdata.size(4)))
             data, target = data.to(device), target.to(device)
             output = model(data)
             test_loss.append(criterion(output, data).item())
@@ -288,7 +325,7 @@ def main():
                         help='input batch size for training (default: 64)')
     parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
                         help='input batch size for testing (default: 1000)')
-    parser.add_argument('--epochs', type=int, default=200, metavar='N',
+    parser.add_argument('--epochs', type=int, default=400, metavar='N',
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=0.0002, metavar='LR',
                         help='learning rate (default: 0.0002)')
@@ -333,8 +370,12 @@ def main():
     #train_dataset = ImageFolderRAM(os.path.expanduser('/home/aca10370eo/group/dataset/cifar10/train'),
     train_dataset = ImageFolderRAM(os.path.expanduser('~/group/msuzuki/MVTechAD/{}/train'.format(args.classes)),
                        transform=transforms.Compose([
-                           transforms.RandomResizedCrop(args.imgsize),
-                           transforms.Grayscale(),
+                           #transforms.RandomResizedCrop(args.imgsize),
+                           #transforms.RandomRotation(180),
+                           #transforms.Grayscale(),
+                           transforms.RandomCrop(args.imgsize),
+                           #transforms.FiveCrop(args.imgsize),
+                           #transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops])),
                            #transforms.RandomHorizontalFlip(),
                            transforms.ToTensor()
                            #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -357,9 +398,11 @@ def main():
         #ImageFolderRAM(os.path.expanduser('/home/aca10370eo/group/dataset/cifar10/val'), transform=transforms.Compose([
     test_loader = torch.utils.data.DataLoader(
         ImageFolderRAM(os.path.expanduser('~/group/msuzuki/MVTechAD/{}/test'.format(args.classes)), transform=transforms.Compose([
-                           transforms.Resize(args.imgsize),
-                           transforms.Grayscale(),
-                           transforms.ToTensor()
+                           #transforms.Resize(args.imgsize),
+                           #transforms.Grayscale(),
+                           transforms.FiveCrop(args.imgsize),
+                           #transforms.ToTensor()
+                           transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
                            #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                            #transforms.Normalize((0.5,), (0.5,))
                        ]),
@@ -368,9 +411,11 @@ def main():
 
     truth_loader = torch.utils.data.DataLoader(
         ImageFolderRAM(os.path.expanduser('~/group/msuzuki/MVTechAD/{}/ground_truth'.format(args.classes)), transform=transforms.Compose([
-                            transforms.Resize(args.imgsize),
-                            transforms.Grayscale(),
-                            transforms.ToTensor()
+                            #transforms.Resize(args.imgsize),
+                            transforms.FiveCrop(args.imgsize),
+                            #transforms.Grayscale(),
+                            transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
+                            #transforms.ToTensor()
                         ]),
                         resize = transforms.Resize(args.imgsize*2)),
         batch_size=args.test_batch_size, shuffle=False, **kwargs)

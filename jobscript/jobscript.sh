@@ -10,5 +10,5 @@ module load cuda/10.0/10.0.130 cudnn/7.4/7.4.2
 
 cd ~/Documents/ssim_ae
 
-python3 conv_ae.py --loss {} --logname {:02}/{}_{}_{} --classes {} --batch-size {} --imgsize {}
-# loss, number, loss, class, commnet, class, batchsize, imgsize
+python3 conv_ae.py --loss {} --logname {:02}/{}_{}_{} --classes {} --batch-size {} --imgsize {} --epochs {}
+# loss, number, loss, class, commnet, class, batchsize, imgsize, epochs
