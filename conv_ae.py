@@ -42,20 +42,22 @@ def choice(tensor0, tensor1, tensor2, n):
     tensor2 = tensor2[idx]
     return tensor0, tensor1, tensor2
 
-def save_diffimage(output, data, truth, filename, filename_roc=None,
-        padding=2, normalize=False, range=None,
+def save_diffimage(output, data, truth, filename, epoch,
+        filename_roc=None, padding=2, normalize=False, range=None,
         scale_each=False, pad_value=0, max_outputs=30):
     if filename_roc is not None:
         # Calc MSE
         mse = np.asarray([torch.nn.functional.mse_loss(out, da) for (out, da) in zip(output, data)])
         mse = np.reshape(mse, (-1, 5))
-        mse = np.mean(mse, axis=1)
+        mse = np.mean(mse, axis=1) # TODO SUM?
+
 
         # Save ROC
         label = np.asarray([np.round(t.max()) for t in np.reshape(np.asarray(truth), (-1, 5*truth.size(1)*truth.size(2)*truth.size(3)))], dtype=np.int8)
         #predict = [np.mean(p) for p in diff]
         fpr, tpr, threshoulds = metrics.roc_curve(label, mse)
         auc = metrics.auc(fpr, tpr)
+        plotter.plot('auc', 'val', 'AUC', epoch, auc)
 
         plt.figure()
         plt.plot(fpr, tpr, label='ROC curve (area = %.2f'%auc)
@@ -287,7 +289,7 @@ def train(args, model, criterion, device, train_loader, optimizer, epoch):
 
     # debug save train images
     save_diffimage(output.cpu().data, data.cpu().data, data.cpu().data,
-            os.path.join(pngpath, 'train_{}.png'.format(epoch)))
+            os.path.join(pngpath, 'train_{}.png'.format(epoch)), epoch)
 
     train_loss = torch.mean(torch.tensor(train_loss))
     plotter.plot('loss', 'train', LOSS+' Loss', epoch, train_loss)
@@ -308,7 +310,7 @@ def test(args, model, criterion, device, test_loader, truth_loader, epoch, now):
 
     # Save Image
     save_diffimage(output.cpu().data, data.cpu().data, truthdata,
-            os.path.join(pngpath, 'image_{}.png'.format(epoch)),
+            os.path.join(pngpath, 'image_{}.png'.format(epoch)), epoch,
             os.path.join(pngpath, 'roc_{}.png'.format(epoch)))
 
     # Show loss

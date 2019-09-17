@@ -45,14 +45,16 @@ class VisdomLinePlotter(object):
                 self.viz.line(X=np.array([x]), Y=np.array([y]), env=self.env, win=self.plots[var_name], name=split_name, update = 'append')
 
         # Matplotlib
-        if var_name+split_name not in self.saveplots:
-            self.saveplots[var_name+split_name] = ([x], [y])
+        if var_name not in self.saveplots:
+            self.saveplots[var_name] = {}
+        if split_name not in self.saveplots[var_name]:
+            self.saveplots[var_name][split_name] = ([x], [y])
         else:
-            self.saveplots[var_name+split_name][0].append(x)
-            self.saveplots[var_name+split_name][1].append(y)
+            self.saveplots[var_name][split_name][0].append(x)
+            self.saveplots[var_name][split_name][1].append(y)
 
         plt.figure()
         plt.title(title_name)
-        for name in self.saveplots.keys():
-            plt.plot(self.saveplots[name][0], self.saveplots[name][1])
-        plt.savefig(os.path.join(self.pngpath, 'plots.png'))
+        for sname in self.saveplots[var_name].keys():
+            plt.plot(self.saveplots[var_name][sname][0], self.saveplots[var_name][sname][1])
+        plt.savefig(os.path.join(self.pngpath, '0000_plots_{}.png'.format(var_name)))
