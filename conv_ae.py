@@ -45,15 +45,17 @@ def choice(tensor0, tensor1, tensor2, n):
 def save_diffimage(output, data, truth, filename, epoch,
         filename_roc=None, padding=2, normalize=False, range=None,
         scale_each=False, pad_value=0, max_outputs=30):
+
     if filename_roc is not None:
         # Calc MSE
         mse = np.asarray([torch.nn.functional.mse_loss(out, da) for (out, da) in zip(output, data)])
-        mse = np.reshape(mse, (-1, 5))
-        mse = np.mean(mse, axis=1) # TODO SUM?
+        #mse = np.reshape(mse, (-1, 5))
+        #mse = np.mean(mse, axis=1) # TODO SUM?
 
 
         # Save ROC
-        label = np.asarray([np.round(t.max()) for t in np.reshape(np.asarray(truth), (-1, 5*truth.size(1)*truth.size(2)*truth.size(3)))], dtype=np.int8)
+        label = np.asarray([np.round(t.max()) for t in np.reshape(np.asarray(truth), (-1, truth.size(1)*truth.size(2)*truth.size(3)))], dtype=np.int8)
+        #label = np.asarray([np.round(t.max()) for t in np.reshape(np.asarray(truth), (-1, 5*truth.size(1)*truth.size(2)*truth.size(3)))], dtype=np.int8)
         #predict = [np.mean(p) for p in diff]
         fpr, tpr, threshoulds = metrics.roc_curve(label, mse)
         auc = metrics.auc(fpr, tpr)
@@ -66,6 +68,7 @@ def save_diffimage(output, data, truth, filename, epoch,
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
         plt.grid(True)
+        # nopng
         plt.savefig(filename_roc)
 
     # Save Diff Image
@@ -92,7 +95,8 @@ def save_diffimage(output, data, truth, filename, epoch,
     ndarr = np.concatenate([ndarr_data, ndarr_output, ndarr_diff, ndarr_truth], axis=1)
 
     im = Image.fromarray(ndarr)
-    im.save(filename)
+    # nopng
+    # im.save(filename)
 
 class GrayCIFAR10(datasets.CIFAR10):
     def __init__(self, root, train=True, 
@@ -302,8 +306,8 @@ def test(args, model, criterion, device, test_loader, truth_loader, epoch, now):
         for i, ((data, target), (truthdata, truthtarget))in enumerate(
                 zip(test_loader, truth_loader)):
             # Open FiveCrop data
-            data = torch.reshape(data, (data.size(0)*data.size(1), data.size(2), data.size(3), data.size(4)))
-            truthdata = torch.reshape(truthdata, (truthdata.size(0)*truthdata.size(1), truthdata.size(2), truthdata.size(3), truthdata.size(4)))
+            #data = torch.reshape(data, (data.size(0)*data.size(1), data.size(2), data.size(3), data.size(4)))
+            #truthdata = torch.reshape(truthdata, (truthdata.size(0)*truthdata.size(1), truthdata.size(2), truthdata.size(3), truthdata.size(4)))
             data, target = data.to(device), target.to(device)
             output = model(data)
             test_loss.append(criterion(output, data).item())
@@ -375,7 +379,7 @@ def main():
                            #transforms.RandomResizedCrop(args.imgsize),
                            #transforms.RandomRotation(180),
                            #transforms.Grayscale(),
-                           transforms.RandomCrop(args.imgsize),
+                           #transforms.RandomCrop(args.imgsize),
                            #transforms.FiveCrop(args.imgsize),
                            #transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops])),
                            #transforms.RandomHorizontalFlip(),
@@ -383,7 +387,7 @@ def main():
                            #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                            #transforms.Normalize((0.5,), (0.5,))
                        ]),
-                       resize = transforms.Resize(args.imgsize*2)
+                       resize = transforms.Resize(args.imgsize)
                        )
     train_sampler = torch.utils.data.RandomSampler(
             train_dataset, replacement=True, num_samples=args.num_samples)
@@ -402,24 +406,24 @@ def main():
         ImageFolderRAM(os.path.expanduser('~/group/msuzuki/MVTechAD/{}/test'.format(args.classes)), transform=transforms.Compose([
                            #transforms.Resize(args.imgsize),
                            #transforms.Grayscale(),
-                           transforms.FiveCrop(args.imgsize),
-                           #transforms.ToTensor()
-                           transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
+                           #transforms.FiveCrop(args.imgsize),
+                           transforms.ToTensor()
+                           #transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
                            #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                            #transforms.Normalize((0.5,), (0.5,))
                        ]),
-                       resize = transforms.Resize(args.imgsize*2)),
+                       resize = transforms.Resize(args.imgsize)),
         batch_size=args.test_batch_size, shuffle=False, **kwargs)
 
     truth_loader = torch.utils.data.DataLoader(
         ImageFolderRAM(os.path.expanduser('~/group/msuzuki/MVTechAD/{}/ground_truth'.format(args.classes)), transform=transforms.Compose([
                             #transforms.Resize(args.imgsize),
-                            transforms.FiveCrop(args.imgsize),
+                            #transforms.FiveCrop(args.imgsize),
                             #transforms.Grayscale(),
-                            transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
-                            #transforms.ToTensor()
+                            #transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
+                            transforms.ToTensor()
                         ]),
-                        resize = transforms.Resize(args.imgsize*2)),
+                        resize = transforms.Resize(args.imgsize)),
         batch_size=args.test_batch_size, shuffle=False, **kwargs)
 
     model = Autoencoder()

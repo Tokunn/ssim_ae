@@ -5,11 +5,11 @@ import subprocess
 
 #classes = [os.path.basename(d) for d in glob.glob(os.path.expanduser('~/group/msuzuki/MVTechAD/*')) if os.path.isdir(d)]
 #classes = ['capsule', 'carpet', 'metal_nut', 'cable']
-classes = ['toothbrush']
+classes = ['carpet', 'bottle', 'tile', 'wood', 'pill', 'screw', 'hazelnut', 'leather', 'transistor', 'zipper', 'toothbrush', 'cable', 'metal_nut', 'grid', 'capsule']
 print(classes)
 
-NUMBER = 11
-COMMENT = '128_MSELOSS_CropTrain_z500_color_batchnorm2_randomcrop'
+NUMBER = 17
+COMMENT = '128_MSELOSS_digest_10time'
 IMGSIZE = 128
 BATCHSIZE = 1024
 #losses = ['MSE', 'SSIM']
@@ -26,10 +26,11 @@ def main():
     jobscripts = []
     for loss in losses:
         for aclass in classes:
-            jsname = '{:02}/{}josbscript_{}_{}.sh'.format(NUMBER, loss, aclass, IMGSIZE)
-            with open(jsname, 'w') as f:
-                f.write(jobscript.format(loss, NUMBER, loss, aclass, COMMENT, aclass, BATCHSIZE, IMGSIZE, EPOCHS))
-                jobscripts.append(jsname)
+            for seed in [6, 5, 15, 32, 85, 55, 71, 16, 78, 69]:
+                jsname = '{:02}/{}josbscript_{}_{}_{}.sh'.format(NUMBER, loss, aclass, IMGSIZE, seed)
+                with open(jsname, 'w') as f:
+                    f.write(jobscript.format(loss, NUMBER, loss, aclass, COMMENT, seed, aclass, BATCHSIZE, IMGSIZE, EPOCHS, seed))
+                    jobscripts.append(jsname)
     #print(jobscripts)
 
     os.chdir('{:02}'.format(NUMBER))

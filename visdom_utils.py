@@ -3,6 +3,7 @@ from visdom import Visdom
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import pickle
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -57,4 +58,6 @@ class VisdomLinePlotter(object):
         plt.title(title_name)
         for sname in self.saveplots[var_name].keys():
             plt.plot(self.saveplots[var_name][sname][0], self.saveplots[var_name][sname][1])
+        with open(os.path.join(self.pngpath, '0000_plots_{}.pcl'.format(var_name)), 'wb') as f:
+            pickle.dump(self.saveplots[var_name], f)
         plt.savefig(os.path.join(self.pngpath, '0000_plots_{}.png'.format(var_name)))
