@@ -12,6 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import datetime
 from sklearn import metrics
+import matplotlib.cm as cm
 
 import pytorch_ssim
 
@@ -43,7 +44,7 @@ def choice(tensor0, tensor1, tensor2, n):
     return tensor0, tensor1, tensor2
 
 def save_diffimage(output, data, truth, filename, epoch,
-        filename_roc=None, padding=2, normalize=False, range=None,
+        filename_roc=None, padding=2, normalize=False, ranges=None,
         scale_each=False, pad_value=0, max_outputs=30):
 
     if filename_roc is not None:
@@ -71,6 +72,19 @@ def save_diffimage(output, data, truth, filename, epoch,
         # nopng
         plt.savefig(filename_roc)
 
+        # scatter
+        plt.figure()
+        print(mse)
+        print(label)
+        print(cm.nipy_spectral)
+        print(len(mse))
+        print(list(range(len(mse))))
+        # plt.scatter(range(len(mse)), mse)
+        plt.scatter(range(len(mse)), mse, c=label, cmap=cm.nipy_spectral)
+        plt.colorbar()
+        plt.savefig(os.path.join(filename_roc+'D.png'))
+        plt.close()
+
     # Save Diff Image
     torch.manual_seed(10)
     
@@ -79,13 +93,13 @@ def save_diffimage(output, data, truth, filename, epoch,
     diff = (diff-diff.min())/(diff.max()-diff.min())
     # make grid
     grid_output = torchvision.utils.make_grid(output, nrow=1, padding=padding, pad_value=pad_value,
-            normalize=normalize, range=range, scale_each=scale_each)
+            normalize=normalize, range=ranges, scale_each=scale_each)
     grid_data = torchvision.utils.make_grid(data, nrow=1, padding=padding, pad_value=pad_value,
-            normalize=normalize, range=range, scale_each=scale_each)
+            normalize=normalize, range=ranges, scale_each=scale_each)
     grid_diff = torchvision.utils.make_grid(diff, nrow=1, padding=padding, pad_value=pad_value,
-            normalize=normalize, range=range, scale_each=scale_each)
+            normalize=normalize, range=ranges, scale_each=scale_each)
     grid_truth = torchvision.utils.make_grid(truth, nrow=1, padding=padding, pad_value=pad_value,
-            normalize=normalize, range=range, scale_each=scale_each)
+            normalize=normalize, range=ranges, scale_each=scale_each)
     # normalize
     ndarr_output = grid_output.mul_(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to('cpu', torch.uint8).numpy()
     ndarr_data = grid_data.mul_(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to('cpu', torch.uint8).numpy()
@@ -96,7 +110,7 @@ def save_diffimage(output, data, truth, filename, epoch,
 
     im = Image.fromarray(ndarr)
     # nopng
-    # im.save(filename)
+    im.save(filename)
 
 class GrayCIFAR10(datasets.CIFAR10):
     def __init__(self, root, train=True, 
