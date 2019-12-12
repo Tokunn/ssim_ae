@@ -5,17 +5,18 @@ import subprocess
 
 #classes = [os.path.basename(d) for d in glob.glob(os.path.expanduser('~/group/msuzuki/MVTechAD/*')) if os.path.isdir(d)]
 #classes = ['capsule', 'carpet', 'metal_nut', 'cable']
-classes = ['carpet', 'bottle', 'tile', 'wood', 'pill', 'screw', 'hazelnut', 'leather', 'transistor', 'zipper', 'toothbrush', 'cable', 'metal_nut', 'grid', 'capsule']
+# classes = ['carpet', 'bottle', 'tile', 'wood', 'pill', 'screw', 'hazelnut', 'leather', 'transistor', 'zipper', 'toothbrush', 'cable', 'metal_nut', 'grid', 'capsule']
+classes = ['screw']
 print(classes)
 
-NUMBER = 17
+NUMBER = 18
 COMMENT = '128_MSELOSS_digest_10time'
 IMGSIZE = 128
 BATCHSIZE = 1024
 #losses = ['MSE', 'SSIM']
 #losses = ['SSIM']
 losses = ['MSE']
-EPOCHS = 300
+EPOCHS = 100
 
 os.makedirs("{:02}".format(NUMBER), exist_ok=True)
 
