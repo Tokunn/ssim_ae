@@ -194,42 +194,51 @@ class Autoencoder(nn.Module):
             # Conv1 128x128x1
             nn.Conv2d(3, 32, 4, stride=2, padding=1),
             nn.BatchNorm2d(32),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             ## Conv256 128x128x1
             #nn.Conv2d(32, 32, 4, stride=2, padding=1),
             #nn.ReLU(True),
             # Conv2 64x64x32
             nn.Conv2d(32, 32, 4, stride=2, padding=1),
             nn.BatchNorm2d(32),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # Conv3 32x32x32
             nn.Conv2d(32, 32, 3, stride=1, padding=1),
             nn.BatchNorm2d(32),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # Conv4 32x32x32
             nn.Conv2d(32, 64, 4, stride=2, padding=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # Conv5 16x16x64
             nn.Conv2d(64, 64, 3, stride=1, padding=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # Conv6 16x16x64
             nn.Conv2d(64, 128, 4, stride=2, padding=1),
             nn.BatchNorm2d(128),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # Conv7 8x8x128
             nn.Conv2d(128, 64, 3, stride=1, padding=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # Conv8 8x8x64
             nn.Conv2d(64, 32, 3, stride=1, padding=1),
             nn.BatchNorm2d(32),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # Conv9 8x8x32
-            nn.Conv2d(32, 500, 8, stride=1, padding=0),
-            nn.BatchNorm2d(500),
-            nn.ReLU(True),
+            nn.Conv2d(32, 100, 8, stride=1, padding=0),
+            nn.BatchNorm2d(100),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # 1x1xd
         )
         self.decoder = nn.Sequential(
@@ -241,37 +250,45 @@ class Autoencoder(nn.Module):
             #nn.Sigmoid()
 
             # ConvT9
-            nn.ConvTranspose2d(500, 32, 8, stride=1, padding=0),
+            nn.ConvTranspose2d(100, 32, 8, stride=1, padding=0),
             nn.BatchNorm2d(32),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # ConvT8
             nn.ConvTranspose2d(32, 64, 3, stride=1, padding=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # ConvT7
             nn.ConvTranspose2d(64, 128, 3, stride=1, padding=1),
             nn.BatchNorm2d(128),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # ConvT6
             nn.ConvTranspose2d(128, 64, 4, stride=2, padding=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # ConvT5
             nn.ConvTranspose2d(64, 64, 3, stride=1, padding=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # ConvT4
             nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),
             nn.BatchNorm2d(32),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # ConvT3
             nn.ConvTranspose2d(32, 32, 3, stride=1, padding=1),
             nn.BatchNorm2d(32),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             # ConvT2
             nn.ConvTranspose2d(32, 32, 4, stride=2, padding=1),
             nn.BatchNorm2d(32),
-            nn.ReLU(True),
+            # nn.ReLU(True),
+            nn.LeakyReLU(0.2),
             ## ConvT256
             #nn.ConvTranspose2d(32, 32, 4, stride=2, padding=1),
             #nn.ReLU(True),
@@ -290,7 +307,7 @@ class Autoencoder(nn.Module):
 def train(args, model, criterion, device, train_loader, optimizer, epoch):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
-        #data = torch.reshape(data, (data.size(0)*5, data.size(2), data.size(3), data.size(4)))
+        # data = torch.reshape(data, (data.size(0)*5, data.size(2), data.size(3), data.size(4)))
         train_loss = []
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
@@ -319,9 +336,9 @@ def test(args, model, criterion, device, test_loader, truth_loader, epoch, now):
     with torch.no_grad():
         for i, ((data, target), (truthdata, truthtarget))in enumerate(
                 zip(test_loader, truth_loader)):
-            # Open FiveCrop data
-            #data = torch.reshape(data, (data.size(0)*data.size(1), data.size(2), data.size(3), data.size(4)))
-            #truthdata = torch.reshape(truthdata, (truthdata.size(0)*truthdata.size(1), truthdata.size(2), truthdata.size(3), truthdata.size(4)))
+            # # Open FiveCrop data
+            # data = torch.reshape(data, (data.size(0)*data.size(1), data.size(2), data.size(3), data.size(4)))
+            # truthdata = torch.reshape(truthdata, (truthdata.size(0)*truthdata.size(1), truthdata.size(2), truthdata.size(3), truthdata.size(4)))
             data, target = data.to(device), target.to(device)
             output = model(data)
             test_loss.append(criterion(output, data).item())
@@ -345,10 +362,10 @@ def main():
                         help='input batch size for training (default: 64)')
     parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
                         help='input batch size for testing (default: 1000)')
-    parser.add_argument('--epochs', type=int, default=400, metavar='N',
+    parser.add_argument('--epochs', type=int, default=200, metavar='N',
                         help='number of epochs to train (default: 10)')
-    parser.add_argument('--lr', type=float, default=0.0002, metavar='LR',
-                        help='learning rate (default: 0.0002)')
+    parser.add_argument('--lr', type=float, default=2*10**-4, metavar='LR',
+                        help='learning rate (default: 2*10**-4)')
     parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                         help='momentum (default: 0.5)')
     parser.add_argument('--weightdecay', type=float, default=0.00001)
@@ -358,7 +375,8 @@ def main():
                         help='random seed (default: 1)')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='how many batches to wait before logging training status')
-    parser.add_argument('--imgsize', type=int, default=128)
+    parser.add_argument('--imgsize', type=int, default=256)
+    parser.add_argument('--cropsize', type=int, default=128)
     parser.add_argument('--num_samples', type=int, default=10000)
     parser.add_argument('--loss', type=str, default='SSIM')
     parser.add_argument('--visdom', action='store_true', default=False)
@@ -390,15 +408,16 @@ def main():
     #train_dataset = ImageFolderRAM(os.path.expanduser('/home/aca10370eo/group/dataset/cifar10/train'),
     train_dataset = ImageFolderRAM(os.path.expanduser('~/group/msuzuki/MVTechAD/{}/train'.format(args.classes)),
                        transform=transforms.Compose([
-                           #transforms.RandomResizedCrop(args.imgsize),
-                           #transforms.RandomRotation(180),
+                           # transforms.RandomResizedCrop(args.cropsize),
+                           # transforms.RandomRotation(180),
+                           transforms.RandomAffine((-180, 180), translate=(0, 1.0)),
                            #transforms.Grayscale(),
-                           #transforms.RandomCrop(args.imgsize),
-                           #transforms.FiveCrop(args.imgsize),
-                           #transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops])),
+                           #transforms.RandomCrop(args.cropsize),
+                           # transforms.FiveCrop(args.imgsize),
+                           # transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops])),
                            #transforms.RandomHorizontalFlip(),
                            transforms.ToTensor()
-                           #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+                           # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                            #transforms.Normalize((0.5,), (0.5,))
                        ]),
                        resize = transforms.Resize(args.imgsize)
@@ -418,12 +437,12 @@ def main():
         #ImageFolderRAM(os.path.expanduser('/home/aca10370eo/group/dataset/cifar10/val'), transform=transforms.Compose([
     test_loader = torch.utils.data.DataLoader(
         ImageFolderRAM(os.path.expanduser('~/group/msuzuki/MVTechAD/{}/test'.format(args.classes)), transform=transforms.Compose([
-                           #transforms.Resize(args.imgsize),
+                           # transforms.Resize(args.imgsize),
                            #transforms.Grayscale(),
-                           #transforms.FiveCrop(args.imgsize),
+                           #transforms.FiveCrop(args.cropsize),
                            transforms.ToTensor()
-                           #transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
-                           #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+                           # transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops])),
+                           # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                            #transforms.Normalize((0.5,), (0.5,))
                        ]),
                        resize = transforms.Resize(args.imgsize)),
@@ -432,9 +451,9 @@ def main():
     truth_loader = torch.utils.data.DataLoader(
         ImageFolderRAM(os.path.expanduser('~/group/msuzuki/MVTechAD/{}/ground_truth'.format(args.classes)), transform=transforms.Compose([
                             #transforms.Resize(args.imgsize),
-                            #transforms.FiveCrop(args.imgsize),
+                            # transforms.FiveCrop(args.imgsize),
                             #transforms.Grayscale(),
-                            #transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
+                            # transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
                             transforms.ToTensor()
                         ]),
                         resize = transforms.Resize(args.imgsize)),

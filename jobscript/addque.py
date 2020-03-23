@@ -5,18 +5,19 @@ import subprocess
 
 #classes = [os.path.basename(d) for d in glob.glob(os.path.expanduser('~/group/msuzuki/MVTechAD/*')) if os.path.isdir(d)]
 #classes = ['capsule', 'carpet', 'metal_nut', 'cable']
-# classes = ['carpet', 'bottle', 'tile', 'wood', 'pill', 'screw', 'hazelnut', 'leather', 'transistor', 'zipper', 'toothbrush', 'cable', 'metal_nut', 'grid', 'capsule']
-classes = ['screw']
+classes = ['carpet', 'bottle', 'tile', 'wood', 'pill', 'screw', 'hazelnut', 'leather', 'transistor', 'zipper', 'toothbrush', 'cable', 'metal_nut', 'grid', 'capsule']
+# classes = ['screw']
 print(classes)
 
-NUMBER = 18
-COMMENT = '128_MSELOSS_digest_10time'
+NUMBER = 21
+COMMENT = '128_MSELOSS_full_10time'
 IMGSIZE = 128
-BATCHSIZE = 1024
+BATCHSIZE = 64
 #losses = ['MSE', 'SSIM']
 #losses = ['SSIM']
 losses = ['MSE']
-EPOCHS = 100
+EPOCHS = 200
+# python3 conv_ae.py --num_samples 10000 --loss MSE --logname sameaspaper --batch-size 64 --classes hazelnut --imgsize 128 --epochs 200
 
 os.makedirs("{:02}".format(NUMBER), exist_ok=True)
 
@@ -27,10 +28,11 @@ def main():
     jobscripts = []
     for loss in losses:
         for aclass in classes:
-            for seed in [6, 5, 15, 32, 85, 55, 71, 16, 78, 69]:
+            for seed in [32, 85, 55, 71, 16, 78, 69]:
+            # for seed in [6, 5, 15, 32, 85, 55, 71, 16, 78, 69]:
                 jsname = '{:02}/{}josbscript_{}_{}_{}.sh'.format(NUMBER, loss, aclass, IMGSIZE, seed)
                 with open(jsname, 'w') as f:
-                    f.write(jobscript.format(loss, NUMBER, loss, aclass, COMMENT, seed, aclass, BATCHSIZE, IMGSIZE, EPOCHS, seed))
+                    f.write(jobscript.format(loss, NUMBER, loss, aclass, COMMENT+str(seed), seed, aclass, BATCHSIZE, IMGSIZE, EPOCHS, seed))
                     jobscripts.append(jsname)
     #print(jobscripts)
 
